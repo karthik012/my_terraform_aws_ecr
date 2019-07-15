@@ -1,26 +1,12 @@
-# Terraform module which creates ECR resources on AWS.
+# Resource to create repo 
 
 resource "aws_ecr_repository" "default" {
- name = "${var.repository_name}"
-}
-
-resource "aws_ecr_repository" "default" {
- count = "${var.create_repo == "true" ?  length(var.repo_names) : 0}"
- name = "${var.repo_names[count.index]}"
-}
-
-resource "aws_ecr_repository_policy" "default" {
-  count = length(var.repo_names)
-  repository = "${aws_ecr_repository.default[count.index].name}"
-  policy     = "${data.aws_iam_policy_document.push_and_pull.json}"
-}
-
-resource "aws_ecr_repository_policy" "default" {
-  repository = "${aws_ecr_repository.default.name}"
-  policy     = "${data.aws_iam_policy_document.push_and_pull.json}"
+  count = "${var.create_repo == "true" ?  length(var.repo_names) : 0}"
+  name  = "${var.repo_names[count.index]}"
 }
 
 # Allows specific accounts to pull images
+
 data "aws_iam_policy_document" "only_pull" {
   statement {
     sid    = "ElasticContainerRegistryOnlyPull"
@@ -40,8 +26,9 @@ data "aws_iam_policy_document" "only_pull" {
 }
 
 # Allows specific accounts to push and pull images
+
 data "aws_iam_policy_document" "push_and_pull" {
-  # An IAM policy document to import as a base for the current policy document
+
   source_json = "${data.aws_iam_policy_document.only_pull.json}"
 
   statement {
@@ -66,7 +53,8 @@ data "aws_iam_policy_document" "push_and_pull" {
 }
 
 resource "aws_ecr_lifecycle_policy" "default" {
-  repository = "${aws_ecr_repository.default.name}"
+  count      = "${var.create_repo == "true" ?  length(var.repo_names) : 0}"
+  repository = "${aws_ecr_repository.default[count.index].name}"
   policy     = "${data.template_file.ecr_lifecycle_policy.rendered}"
 }
 
@@ -84,6 +72,12 @@ locals {
   only_pull_accounts     = "${formatlist("arn:aws:iam::%s:root", var.only_pull_accounts)}"
   push_and_pull_accounts = "${formatlist("arn:aws:iam::%s:root", var.push_and_pull_accounts)}"
   current_account        = "${format("arn:aws:iam::%s:root", data.aws_caller_identity.current.account_id)}"
+}
+
+resource "aws_ecr_repository_policy" "default" {
+  count      = "${var.create_repo == "true" ?  length(var.repo_names) : 0}"
+  repository = "${aws_ecr_repository.default[count.index].name}"
+  policy     = "${data.aws_iam_policy_document.push_and_pull.json}"
 }
 
 data "aws_caller_identity" "current" {}

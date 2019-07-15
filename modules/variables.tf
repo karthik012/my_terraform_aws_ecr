@@ -3,7 +3,13 @@ variable "name" {
   description = "Name of repository names to be created"
 }
 
-variable "name_list" {
+variable "createrepo" {
+  type        = "string"
+  default     = "true"
+  description = "Flag to create repository"
+}
+
+variable "repo_names" {
   type    = "list"
   description = "List of names of repository names to be created"
 }
