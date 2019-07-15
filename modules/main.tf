@@ -1,11 +1,22 @@
 # Terraform module which creates ECR resources on AWS.
 
-resource "aws_ecr_repository" "name_list"{
-  name       = "var.name_list[length(var.name_list)]"
+resource "aws_ecr_repository" "default" {
+ name = "${var.repository_name}"
+}
+
+resource "aws_ecr_repository" "default" {
+ count = "${var.create_repo == "true" ?  length(var.repo_names) : 0}"
+ name = "${var.repo_names[count.index]}"
 }
 
 resource "aws_ecr_repository_policy" "default" {
-  repository = "${aws_ecr_repository.name_list.*.name}"
+  count = length(var.repo_names)
+  repository = "${aws_ecr_repository.default[count.index].name}"
+  policy     = "${data.aws_iam_policy_document.push_and_pull.json}"
+}
+
+resource "aws_ecr_repository_policy" "default" {
+  repository = "${aws_ecr_repository.default.name}"
   policy     = "${data.aws_iam_policy_document.push_and_pull.json}"
 }
 
@@ -42,7 +53,6 @@ data "aws_iam_policy_document" "push_and_pull" {
       type        = "AWS"
     }
 
-    # https://docs.aws.amazon.com/AmazonECR/latest/userguide/RepositoryPolicyExamples.html#IAM_within_account
     actions = [
       "ecr:GetDownloadUrlForLayer",
       "ecr:BatchGetImage",
@@ -55,9 +65,8 @@ data "aws_iam_policy_document" "push_and_pull" {
   }
 }
 
-
 resource "aws_ecr_lifecycle_policy" "default" {
-  repository = "${aws_ecr_repository.name_list.*.name}"
+  repository = "${aws_ecr_repository.default.name}"
   policy     = "${data.template_file.ecr_lifecycle_policy.rendered}"
 }
 
